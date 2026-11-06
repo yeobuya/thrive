@@ -5,7 +5,7 @@
 # libraries are not included and need to be separately downloaded
 # (for example from our official Thrive git repository)
 
-add_library(thrive_extension SHARED
+add_library(thrive_extension ${THRIVE_LIBRARY_TYPE}
   "${PROJECT_BINARY_DIR}/Include.h"
   core/RegisterThriveTypes.cpp core/RegisterThriveTypes.hpp
   atlas/xatlas.cpp atlas/xatlas.h

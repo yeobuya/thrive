@@ -170,3 +170,6 @@ perf.data
 
 # Dev tools
 .direnv/
+
+# iOS static native library bundle, built by ios/build-ios.sh
+/lib/ios/

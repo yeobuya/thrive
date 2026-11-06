@@ -4,7 +4,7 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <TargetFramework>net10.0</TargetFramework>
     <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
-    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'ios' ">net8.0</TargetFramework>
+    <!-- iOS uses the same .NET version as desktop, the dependencies (Arch, Sugiyama, shared projects) all need net10.0 -->
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
@@ -25,6 +25,17 @@
       $(DefaultItemExcludes);test/**/*;addons\gdUnit4\**\*
     </DefaultItemExcludes>
   </PropertyGroup>
+  <!-- iOS is compiled ahead of time with trimming. The game data and saves are read with reflection (Newtonsoft.Json
+       and our own converters) so keep these assemblies whole instead of letting the trimmer remove types -->
+  <ItemGroup Condition=" '$(GodotTargetPlatform)' == 'ios' ">
+    <TrimmerRootAssembly Include="Thrive" />
+    <TrimmerRootAssembly Include="Newtonsoft.Json" />
+    <TrimmerRootAssembly Include="SharedBase" />
+    <TrimmerRootAssembly Include="ThriveScriptsShared" />
+    <TrimmerRootAssembly Include="Arch" />
+    <TrimmerRootAssembly Include="Arch.System" />
+    <TrimmerRootAssembly Include="YamlDotNet" />
+  </ItemGroup>
   <!-- Non-Steam build needs to skip this file -->
   <ItemGroup>
     <Compile Remove="src\steam\SteamClient.cs" />
