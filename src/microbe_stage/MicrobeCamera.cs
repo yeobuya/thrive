@@ -292,6 +292,36 @@ public partial class MicrobeCamera : Camera3D, ISaveLoadedTracked, IGameCamera, 
     }
 
     /// <summary>
+    ///   Changes the zoom by a camera height amount, used by touch pinch zooming
+    /// </summary>
+    /// <param name="heightChange">How much to change the camera height, positive zooms out</param>
+    public void ZoomByAmount(float heightChange)
+    {
+        if (!Current)
+            return;
+
+        var old = CameraHeight;
+
+        CameraHeight = Math.Clamp(CameraHeight + heightChange, MinCameraHeight, MaxCameraHeight);
+
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (CameraHeight != old)
+            EmitSignal(SignalName.OnZoomChanged, CameraHeight);
+    }
+
+    /// <summary>
+    ///   Finds the world position (on the gameplay plane) under a screen position, for example a touch point
+    /// </summary>
+    /// <param name="screenPosition">Position in viewport coordinates</param>
+    /// <returns>The world position or null if the camera can't see the plane at that point</returns>
+    public Vector3? ScreenToWorldPosition(Vector2 screenPosition)
+    {
+        var worldPlane = new Plane(new Vector3(0, 1, 0), 0.0f);
+
+        return worldPlane.IntersectsRay(ProjectRayOrigin(screenPosition), ProjectRayNormal(screenPosition));
+    }
+
+    /// <summary>
     ///   Set the used background images and particles
     /// </summary>
     public void SetBackground(Background background)

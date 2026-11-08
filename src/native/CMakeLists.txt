@@ -8,7 +8,7 @@
 # libraries are not included and need to be separately downloaded
 # (for example from our official Thrive git repository)
 
-add_library(thrive_native SHARED
+add_library(thrive_native ${THRIVE_LIBRARY_TYPE}
   "${PROJECT_BINARY_DIR}/Include.h"
   core/ForwardDefinitions.hpp
   interop/CInterop.cpp interop/CInterop.h

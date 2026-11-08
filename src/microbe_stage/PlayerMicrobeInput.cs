@@ -25,6 +25,7 @@ public partial class PlayerMicrobeInput : NodeWithInput
     private Vector3 controllerLookDirection = new(0, 0, -1);
 
     private bool autoMove;
+    private bool touchSlimeHeld;
     private bool hasExternalLookDirection;
 
 #pragma warning disable CA2213 // this is our parent object
@@ -33,12 +34,33 @@ public partial class PlayerMicrobeInput : NodeWithInput
     ///   A reference to the stage is kept to get to the player object and also the cloud spawning.
     /// </summary>
     private MicrobeStage stage = null!;
+
+    /// <summary>
+    ///   On-screen touch controls, only created on touch devices (see <see cref="TouchControlsHelper"/>)
+    /// </summary>
+    private MicrobeTouchControls? touchControls;
 #pragma warning restore CA2213
 
     public override void _Ready()
     {
         // Not the cleanest that the parent has to be MicrobeState type...
         stage = (MicrobeStage)GetParent();
+
+        if (TouchControlsHelper.UseTouchControls)
+        {
+            touchControls = new MicrobeTouchControls();
+            touchControls.ActionChanged += OnTouchAction;
+            AddChild(touchControls);
+        }
+    }
+
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+
+        // Fingers held down when the game pauses (or the stage is left) would otherwise stay stuck
+        if (what is (int)NotificationPaused or (int)NotificationExitTree)
+            touchControls?.ResetTouches();
     }
 
     public override void _EnterTree()
@@ -67,6 +89,26 @@ public partial class PlayerMicrobeInput : NodeWithInput
         _ = delta;
         const float epsilon = 0.01f;
 
+        bool touchMoving = false;
+
+        if (touchControls != null)
+        {
+            ApplyTouchZoom();
+
+            if (touchSlimeHeld)
+                SecreteSlime(delta);
+
+            var stick = touchControls.StickDirection;
+
+            if (stick.LengthSquared() > 0)
+            {
+                // Screen right is world +X and screen down is world +Z with the top-down microbe camera
+                forwardMovement = stick.Y;
+                leftRightMovement = stick.X;
+                touchMoving = true;
+            }
+        }
+
         // Reset auto move if a key was pressed
         if (Math.Abs(forwardMovement) + Math.Abs(leftRightMovement) > epsilon)
         {
@@ -91,7 +133,7 @@ public partial class PlayerMicrobeInput : NodeWithInput
             bool screenRelative = false;
             var settingValue = Settings.Instance.TwoDimensionalMovement.Value;
 
-            if (settingValue == TwoDimensionalMovementMode.ScreenRelative ||
+            if (touchMoving || settingValue == TwoDimensionalMovementMode.ScreenRelative ||
                 (settingValue == TwoDimensionalMovementMode.Automatic && inputMethod == ActiveInputMethod.Controller))
             {
                 screenRelative = true;
@@ -99,7 +141,12 @@ public partial class PlayerMicrobeInput : NodeWithInput
 
             var movement = new Vector3(leftRightMovement, 0, forwardMovement);
 
-            if (inputMethod == ActiveInputMethod.Controller || hasExternalLookDirection)
+            if (touchControls != null)
+            {
+                UpdateTouchLookDirection(position.Position, movement, touchMoving);
+            }
+
+            if (inputMethod == ActiveInputMethod.Controller || hasExternalLookDirection || touchControls != null)
             {
                 control.LookAtPoint = position.Position + controllerLookDirection * CONTROLLER_LOOK_POINT_DISTANCE;
             }
@@ -528,6 +575,81 @@ public partial class PlayerMicrobeInput : NodeWithInput
         {
             SpawnCheatCloud(Compound.Phosphates, delta);
         }
+    }
+
+    /// <summary>
+    ///   Picks the look direction for touch controls: a finger on the world aims at that point, otherwise the cell
+    ///   faces the way the movement stick is pushed and keeps its last direction when the stick is released.
+    /// </summary>
+    private void UpdateTouchLookDirection(Vector3 playerPosition, Vector3 movement, bool touchMoving)
+    {
+        if (touchControls == null)
+            return;
+
+        if (touchControls.IsAiming)
+        {
+            var target = stage.Camera.ScreenToWorldPosition(touchControls.AimScreenPosition);
+
+            if (target != null)
+            {
+                var direction = target.Value - playerPosition;
+                direction.Y = 0;
+
+                if (direction.LengthSquared() > CONTROLLER_LOOK_EPSILON)
+                {
+                    controllerLookDirection = direction.Normalized();
+                    return;
+                }
+            }
+        }
+
+        if (touchMoving && movement.LengthSquared() > CONTROLLER_LOOK_EPSILON)
+            controllerLookDirection = movement.Normalized();
+    }
+
+    private void OnTouchAction(MicrobeTouchControls.TouchAction action, bool pressed)
+    {
+        switch (action)
+        {
+            case MicrobeTouchControls.TouchAction.Engulf:
+                if (pressed)
+                    ToggleEngulf();
+                break;
+            case MicrobeTouchControls.TouchAction.Toxin:
+                if (pressed)
+                    EmitToxin();
+                break;
+            case MicrobeTouchControls.TouchAction.Slime:
+                touchSlimeHeld = pressed;
+                break;
+            case MicrobeTouchControls.TouchAction.Sprint:
+            {
+                if (pressed)
+                {
+                    StartSprint();
+                }
+                else
+                {
+                    EndSprint();
+                }
+
+                break;
+            }
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(action), action, null);
+        }
+    }
+
+    private void ApplyTouchZoom()
+    {
+        if (touchControls == null)
+            return;
+
+        var zoom = touchControls.TakeZoomChange();
+
+        if (zoom != 0)
+            stage.Camera.ZoomByAmount(zoom);
     }
 
     private void RemoveCellFromColony(Entity target)

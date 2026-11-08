@@ -205,6 +205,13 @@ public partial class ModLoader : Node
         if (newMods.Count < 1)
             return;
 
+        if (FeatureInformation.IsMobile)
+        {
+            // iOS doesn't allow loading code at runtime, and mods aren't supported on mobile yet in general
+            GD.PrintErr("Mod loading is disabled on mobile platforms");
+            return;
+        }
+
         if (!SafeModeStartupHandler.AreModsAllowed())
         {
             GD.PrintErr("Mod loading is disabled due to safe mode startup");

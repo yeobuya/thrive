@@ -476,6 +476,13 @@ public static class NativeInterop
             return NativeLibrary.Load(libraryName, assembly, searchPath);
         }
 
+        if (OperatingSystem.IsIOS() && NativeConstants.GetLibraryFromName(libraryName, out _))
+        {
+            // iOS can't load separate native libraries from the app bundle, so the Thrive libraries are linked
+            // statically into the app executable (see doc/ios_port.md) and all symbols are found from there
+            return NativeLibrary.GetMainProgramHandle();
+        }
+
         if (!NativeConstants.GetLibraryFromName(libraryName, out var library))
         {
 #if DEBUG

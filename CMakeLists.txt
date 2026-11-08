@@ -54,6 +54,17 @@ option(NULL_HAS_UNUSUAL_REPRESENTATION
 option(THRIVE_GODOT_API_FILE "Set to override folder Godot API file is looked for in"
   "")
 
+# iOS can't load separate native libraries from an app bundle, so there the libraries are built as static
+# libraries that get linked into the app executable (see doc/ios_port.md)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(THRIVE_LIBRARY_TYPE_DEFAULT STATIC)
+else()
+  set(THRIVE_LIBRARY_TYPE_DEFAULT SHARED)
+endif()
+
+set(THRIVE_LIBRARY_TYPE "${THRIVE_LIBRARY_TYPE_DEFAULT}" CACHE STRING
+  "Library type for the Thrive native libraries: SHARED or STATIC (STATIC is needed for iOS)")
+
 # End of options section
 
 include(CMakeHelperFunctions)
@@ -222,7 +233,9 @@ set(GODOTCPP_CUSTOM_API_FILE "${GODOT_GDEXTENSION_DIR}/extension_api.json")
 # Add the subfolders that define the actual things to build
 add_subdirectory(third_party)
 
-if(NOT THRIVE_DISTRIBUTION OR (THRIVE_AVX AND THRIVE_DISTRIBUTION))
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  # Early checks are CPU feature checks for desktop x86 processors, not needed on iPhones
+elseif(NOT THRIVE_DISTRIBUTION OR (THRIVE_AVX AND THRIVE_DISTRIBUTION))
   # Early checks is not compiled in non-avx mode
   add_subdirectory(src/native/early_checks)
 endif()

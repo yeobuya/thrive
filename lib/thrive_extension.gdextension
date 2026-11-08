@@ -24,6 +24,10 @@ windows.release.x86_64 = "res://lib/libthrive_extension_without_avx.dll"
 linux.debug.x86_64 = "res://lib/debug/libthrive_extension_without_avx.so" 
 linux.release.x86_64 = "res://lib/libthrive_extension_without_avx.so"
 
+# iOS needs the libraries linked statically into the app, ios/build-ios.sh builds this (see doc/ios_port.md)
+ios.debug.arm64 = "res://lib/ios/thrive_ios.xcframework"
+ios.release.arm64 = "res://lib/ios/thrive_ios.xcframework"
+
 # TODO: other architectures and phones
 # linux.debug.arm64 = "res://lib/debug/libthrive_extension_without_avx.arm64.so"
 # linux.release.arm64 = "res://lib/libthrive_extension_without_avx.arm64.so"
